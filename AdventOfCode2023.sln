@@ -3,14 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventOfCode2023", "AdventOfCode2023\AdventOfCode2023.csproj", "{E1FC4236-D2A4-4FA0-8A19-5F336C90D83B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdventOfCode2023", "AdventOfCode2023\AdventOfCode2023.csproj", "{E1FC4236-D2A4-4FA0-8A19-5F336C90D83B}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "InputData", "InputData", "{717E51FD-E34A-4E5A-8A4E-5974654C44E1}"
-	ProjectSection(SolutionItems) = preProject
-		Puzzle_1-1.txt = Puzzle_1-1.txt
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdventOfCode2023Ex", "AdventOfCode2023Ex\AdventOfCode2023Ex.csproj", "{F5F0069E-46DD-4574-8966-7E857F675F86}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdventOfCode2023Ex", "AdventOfCode2023Ex\AdventOfCode2023Ex.csproj", "{F5F0069E-46DD-4574-8966-7E857F675F86}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
