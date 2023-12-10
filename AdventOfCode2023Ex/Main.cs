@@ -1,4 +1,4 @@
 ﻿// See https://aka.ms/new-console-template for more information
 Console.WriteLine("Hello, World!");
 
-Console.WriteLine(Puzzle_7.Puzzle_7_2.Execute());
+Console.WriteLine(Puzzle_8.Puzzle_8_2.Execute());
