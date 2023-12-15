@@ -73,6 +73,22 @@ internal class Puzzle_13
 		List<string> Rows = new();
 		List<string> Cols = new();
 
+		public int Width
+		{
+			get
+			{
+				return Cols.Count;
+			}
+		}
+
+		public int Height
+		{
+			get
+			{
+				return Rows.Count;
+			}
+		}
+
 		public CharMap(List<string> rows)
 		{
 			this.Rows = rows;
@@ -101,6 +117,116 @@ internal class Puzzle_13
 
 			return transposed;
 		}
+
+		public CharMap CleanSmudge(int x, int y)
+		{
+			// returns a copy of this CharMap with the x,y symbol swapped
+			var queryChar = Rows[y][x];
+			char swapChar;
+			if (queryChar == '#')
+			{
+				swapChar = '.';
+			}
+			else
+			{
+				swapChar = '#';
+			}
+
+			string newRow;
+			if (x == Cols.Count)
+			{
+				newRow = Rows[y][..x] + swapChar;
+			}
+			else
+			{
+				newRow = Rows[y][..x] + swapChar + Rows[y][(x + 1)..];
+			}
+
+			var newRows = new List<string>(Rows);
+			newRows[y] = newRow;
+
+			return new CharMap(newRows);
+
+		}
+
+		internal ReflectResult FindReflection(ReflectResult antiReflection)
+		{
+			// try 4 times, rows and columns forward and backwards
+			var workCols = new List<string>(Cols);
+
+			var attemptVertLeft = DoReflection(workCols);
+
+			if (attemptVertLeft != null)
+			{
+				if (((ReflectResult)attemptVertLeft).isHorizontal == antiReflection.isHorizontal &&
+					((ReflectResult)attemptVertLeft).linesBeyondReflection == antiReflection.linesBeyondReflection)
+				{
+					// not the answer we're looking for. Keep searchin'.
+				}
+				else
+				{
+					return (ReflectResult)attemptVertLeft;
+				}
+			}
+
+			workCols.Reverse();
+			var attemptVerRight = DoReflection(workCols, true);
+
+			if (attemptVerRight != null)
+			{
+				if (((ReflectResult)attemptVerRight).isHorizontal == antiReflection.isHorizontal &&
+					((ReflectResult)attemptVerRight).linesBeyondReflection == antiReflection.linesBeyondReflection)
+				{
+					// not the answer we're looking for. Keep searchin'.
+				}
+				else
+				{
+					return (ReflectResult)attemptVerRight;
+				}
+			}
+
+			var workRows = new List<string>(Rows);
+
+			var attemptHorizTop = DoReflection(workRows);
+			if (attemptHorizTop != null)
+			{
+				var temp = (ReflectResult)attemptHorizTop;
+				temp.isHorizontal = true;
+
+				if (temp.isHorizontal == antiReflection.isHorizontal &&
+					temp.linesBeyondReflection == antiReflection.linesBeyondReflection)
+				{
+					// not the answer we're looking for. Keep searchin'.
+				}
+				else
+				{
+					return temp;
+				}
+
+			}
+
+			workRows.Reverse();
+			var attemptHorizBot = DoReflection(workRows, true);
+			if (attemptHorizBot != null)
+			{
+				var temp = (ReflectResult)attemptHorizBot;
+				temp.isHorizontal = true;
+				if (temp.isHorizontal == antiReflection.isHorizontal &&
+					temp.linesBeyondReflection == antiReflection.linesBeyondReflection)
+				{
+					// not the answer we're looking for. Keep searchin'.
+				}
+				else
+				{
+					return temp;
+				}
+			}
+
+			//if we get here, we have a map with NO symmetry
+			return new ReflectResult() { linesBeyondReflection = -1 };
+		}
+
+
 
 		// for a mirror to exist vertically, EITHER the first column has a
 		// duplicate XOR the last column has a duplicate.
@@ -139,7 +265,7 @@ internal class Puzzle_13
 			}
 
 			//if we get here, we have a map with NO symmetry
-			return new ReflectResult();
+			return new ReflectResult() { linesBeyondReflection = -1 };
 		}
 
 
@@ -203,27 +329,79 @@ internal class Puzzle_13
 	{
 		public static long Execute()
 		{
-			string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"Data\Puzzle_12.txt");
+			string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"Data\Puzzle_13.txt");
 			string[] input = File.ReadAllLines(path);
 
-			long arrangements = 0;
+			List<CharMap> charMaps = new();
+			List<string> charMapInput = new();
 
 			foreach (var s in input)
 			{
-				var lineBits = s.Split(" ");
-				string record = lineBits[0] + "?" + lineBits[0] + "?" + lineBits[0] + "?" + lineBits[0] + "?" + lineBits[0];
-				List<int> groupList = lineBits[1].Split(",").Select(i => int.Parse(i)).ToList();
+				if (s.Length == 0 && charMapInput.Count != 0)
+				{
+					var temp = new CharMap(new List<string>(charMapInput));
+					charMaps.Add(temp);
 
-				List<int> mult5Grouplist = new();
-				mult5Grouplist.AddRange(groupList);
-				mult5Grouplist.AddRange(groupList);
-				mult5Grouplist.AddRange(groupList);
-				mult5Grouplist.AddRange(groupList);
-				mult5Grouplist.AddRange(groupList);
-
-				//arrangements = arrangements + CalculateNonogram(record, mult5Grouplist);
+					charMapInput.Clear();
+				}
+				else
+				{
+					charMapInput.Add(s);
+				}
 			}
-			return arrangements;
+			if (charMapInput.Count != 0)
+			{
+				var temp = new CharMap(new List<string>(charMapInput));
+				charMaps.Add(temp);
+
+				charMapInput.Clear();
+			}
+
+			int resTotals = 0;
+
+			foreach (var cm in charMaps)
+			{
+
+
+
+				ReflectResult res = cm.FindReflection();
+				ReflectResult smudgeFinal = new ReflectResult() { linesBeyondReflection = -1 };
+
+				for (int x = 0; x < cm.Width; x++)
+				{
+					for (int y = 0; y < cm.Height; y++)
+					{
+						var smudgeRes = cm.CleanSmudge(x, y).FindReflection(res);
+
+						// no reflection, skip
+						if (smudgeRes.linesBeyondReflection == -1) continue;
+
+						// same reflection, skip
+						if (smudgeRes.linesBeyondReflection == res.linesBeyondReflection &&
+							smudgeRes.isHorizontal == res.isHorizontal) continue;
+
+						// different reflection, this is the one we want
+						smudgeFinal = smudgeRes;
+						goto Found;
+					}
+				}
+
+			Found:
+				if (smudgeFinal.linesBeyondReflection < 0)
+				{
+					throw new Exception("crud");
+				}
+				if (smudgeFinal.isHorizontal)
+				{
+					resTotals += 100 * smudgeFinal.linesBeyondReflection;
+				}
+				else
+				{
+					resTotals += smudgeFinal.linesBeyondReflection;
+				}
+			}
+
+			return resTotals;
 		}
 	}
 }
