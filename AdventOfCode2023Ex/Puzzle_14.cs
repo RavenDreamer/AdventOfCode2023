@@ -125,7 +125,7 @@ internal class Puzzle_14
 		public static long Execute()
 		{
 
-			string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"Data\debug.txt");
+			string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"Data\Puzzle_14.txt");
 			string[] input = File.ReadAllLines(path);
 
 			var height = input.Length;
@@ -149,7 +149,7 @@ internal class Puzzle_14
 			long secondCacheHit = -1;
 
 
-			for (long i = 0; i < 100000; i++)
+			for (long i = 0; i < 120; i++)
 			{
 				////// print Gridspace for debugging
 				//for (int y = gridSpace.GetLength(1) - 1; y >= 0; y--)
@@ -171,10 +171,8 @@ internal class Puzzle_14
 
 				// find the answer
 				var test = struts.Sum(r => r.CalculatePlatformStress());
-				if (test == 64)
-				{
-					Console.WriteLine("answer at:" + i);
-				}
+				Console.WriteLine("answer:" + test);
+
 
 
 				// Convert from struts to westward Grid
@@ -201,7 +199,7 @@ internal class Puzzle_14
 						// pattern = 
 						// firstCacheHit + (iterCount - firstCacheHit) MOD cycleLength = the "equivalent" value?
 						var modHalf = (1000000000 - firstCacheHit) % cycleLength;
-						//Console.WriteLine(firstCacheHit + modHalf);
+						Console.WriteLine(firstCacheHit + "+" + modHalf);
 					}
 				}
 
@@ -210,12 +208,26 @@ internal class Puzzle_14
 				tiltDir = "W";
 				struts = Tilt(gridSpace);
 
+				// find the answer
+				test = struts.Sum(r => r.CalculatePlatformStress());
+				if (test == 64)
+				{
+					Console.WriteLine("answer at:" + i);
+				}
+
 				// Convert from struts to southward Grid
 				gridSpace = RecreateRotateClockwise(struts, height, width);
 
 				// tilt south
 				tiltDir = "S";
 				struts = Tilt(gridSpace);
+
+				// find the answer
+				test = struts.Sum(r => r.CalculatePlatformStress());
+				if (test == 64)
+				{
+					Console.WriteLine("answer at:" + i);
+				}
 
 				// Convert from struts to eastward Grid
 				gridSpace = RecreateRotateClockwise(struts, width, height);
@@ -224,8 +236,22 @@ internal class Puzzle_14
 				tiltDir = "E";
 				struts = Tilt(gridSpace);
 
+				// find the answer
+				test = struts.Sum(r => r.CalculatePlatformStress());
+				if (test == 64)
+				{
+					Console.WriteLine("answer at:" + i);
+				}
+
 				// Convert from struts back to northward Grid
 				gridSpace = RecreateRotateClockwise(struts, height, width);
+
+				int stress = CalculateStressFromGrid(gridSpace);
+				Console.WriteLine("Stress: " + stress);
+				if (stress == 64)
+				{
+					Console.WriteLine("HA~!");
+				}
 
 				long zz = struts.Sum(r => r.CalculatePlatformStress());
 			}
@@ -234,7 +260,30 @@ internal class Puzzle_14
 			tiltDir = "N";
 			struts = Tilt(gridSpace);
 
+			//RecreateRotateClockwise(struts, width, height);
+
 			return struts.Sum(r => r.CalculatePlatformStress());
+		}
+
+		private static int CalculateStressFromGrid(char[,] gridSpace)
+		{
+			int stress = 0;
+			for (int y = gridSpace.GetLength(1) - 1; y >= 0; y--)
+			{
+
+
+
+				for (int x = 0; x < gridSpace.GetLength(0); x++)
+				{
+					if (gridSpace[x, y] == 'O')
+					{
+						stress += y + 1;
+					}
+
+				}
+				//Console.WriteLine(gridLine);
+			}
+			return stress;
 		}
 
 		private static char[,] RecreateRotateClockwise(List<Strut> struts, int width, int height)
