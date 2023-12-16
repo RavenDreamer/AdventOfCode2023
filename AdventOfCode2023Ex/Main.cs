@@ -4,7 +4,9 @@ Console.WriteLine("Hello, World!");
 
 var watch = System.Diagnostics.Stopwatch.StartNew();
 
-Console.WriteLine(Puzzle_13.Part_2.Execute());
+Console.WriteLine(Puzzle_14.Part_1.Execute());
+
+Console.WriteLine(Puzzle_14.Part_2.Execute());
 
 // the code that you want to measure comes here
 watch.Stop();
