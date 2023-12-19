@@ -21,22 +21,33 @@ internal class Puzzle_18
 
 	}
 
+	internal class Pair
+	{
+		public long X { get; set; }
+		public long Y { get; set; }
+
+		public Pair(long x, long y)
+		{
+			X = x;
+			Y = y;
+		}
+	}
 
 	internal class Edge
 	{
 
-		internal int StartX { get; set; }
-		internal int StartY { get; set; }
+		internal long StartX { get; set; }
+		internal long StartY { get; set; }
 
-		internal int EndX { get; set; }
-		internal int EndY { get; set; }
+		internal long EndX { get; set; }
+		internal long EndY { get; set; }
 		internal Direction Direction { get; set; }
 		internal Edge PriorEdge { get; set; }
 		internal Edge NextEdge { get; set; }
 
 		internal string EdgeColor { get; set; } = "";
 
-		public int GetDistance()
+		public long GetDistance()
 		{
 			var xDiff = EndX - StartX;
 			if (xDiff < 0) xDiff *= -1;
@@ -108,7 +119,6 @@ internal class Puzzle_18
 				var newEdge = new Edge()
 				{
 					Direction = edgeDir,
-					EdgeColor = stringBits[2],
 					StartX = initialX,
 					StartY = initialY,
 					EndX = rollingX,
@@ -122,35 +132,86 @@ internal class Puzzle_18
 			// assign last Edge as the priorEdge to the first Edge
 			edgeList[0].PriorEdge = priorEdge;
 
+			int xOffset = 0;
+			int yOffset = 0;
+
+			List<Pair> verts = new();
 			// set the forward looking edges too
 			foreach (Edge edge in edgeList)
 			{
 				edge.PriorEdge.NextEdge = edge;
-			}
-			List<Edge> orphans = new();
 
-			List<Edge> successorList = GenerateSuccessor(edgeList, orphans);
-			while (successorList.Count > 0)
+				var isConvex = IsConvexAngle(edge.Direction, edge.PriorEdge.Direction);
+
+				if (isConvex)
+				{
+					// top left
+					if (edge.Direction == Direction.Right)
+					{
+						xOffset = 0;
+						yOffset = 0;
+					}
+					//bottom right
+					if (edge.Direction == Direction.Left)
+					{
+						xOffset = 1;
+						yOffset = -1;
+					}
+					// top right
+					if (edge.Direction == Direction.Down)
+					{
+						xOffset = 1;
+						yOffset = 0;
+					}
+					// bottom right
+					if (edge.Direction == Direction.Up)
+					{
+						xOffset = 0;
+						yOffset = -1;
+					}
+				}
+				else
+				{
+					// top right
+					if (edge.Direction == Direction.Right)
+					{
+						xOffset = 1;
+						yOffset = 0;
+					}
+					// bottom left
+					if (edge.Direction == Direction.Left)
+					{
+						xOffset = 0;
+						yOffset = -1;
+					}
+					// bottom right
+					if (edge.Direction == Direction.Down)
+					{
+						xOffset = 1;
+						yOffset = -1;
+					}
+					// top left
+					if (edge.Direction == Direction.Up)
+					{
+						xOffset = 0;
+						yOffset = 0;
+					}
+				}
+
+				var nextVert = new Pair(edge.StartX + xOffset, edge.StartY + yOffset);
+				verts.Add(nextVert);
+			}
+
+			// Greene's theorem
+			long cumulativeArea = 0;
+			for (int i = 0; i < verts.Count - 1; i++)
 			{
-				edgeList.AddRange(successorList);
-				var prospectiveSuccessors = GenerateSuccessor(successorList, orphans);
-				HashSet<Edge> successorHash = new HashSet<Edge>(successorList);
-				int successorCount = successorHash.Count;
-				foreach (Edge edge in prospectiveSuccessors)
-				{
-					successorHash.Add(edge);
-				}
-				if (successorCount == successorHash.Count)
-				{
-					//no new edges were added, so we've fully recursed
-					break;
-				}
-
+				var j = (i + 1) % verts.Count;
+				cumulativeArea = cumulativeArea + (verts[i].X * verts[j].Y);
+				cumulativeArea = cumulativeArea - (verts[i].Y * verts[j].X);
 			}
 
-			var sum = edgeList.Sum(e => e.GetDistance());
-
-			return sum;
+			return cumulativeArea / 2;
 		}
 
 		private static List<Edge> GenerateSuccessor(List<Edge> edgeList, List<Edge> orphans)
@@ -484,12 +545,183 @@ internal class Puzzle_18
 
 	internal class Part_2
 	{
+		private static bool IsConvexAngle(Direction current, Direction previous)
+		{
+			switch (current)
+			{
+				case Direction.Right:
+					return previous == Direction.Up;
+				case Direction.Left:
+					return previous == Direction.Down;
+				case Direction.Up:
+					return previous == Direction.Left;
+				case Direction.Down:
+					return previous == Direction.Right;
+				default:
+					throw new Exception("Impossible to get here");
+			}
+		}
+
 		public static long Execute()
 		{
-			string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"Data\Puzzle_17.txt");
+			string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"Data\Puzzle_18.txt");
 			string[] input = File.ReadAllLines(path);
 
-			return 0;
+			List<Edge> edgeList = new();
+			Edge priorEdge = null;
+			// start at 0,0
+			long rollingX = 0;
+			long rollingY = 0;
+			foreach (var s in input)
+			{
+				var initialX = rollingX;
+				var initialY = rollingY;
+
+				// each line has 3 parts, a Direction, a distance, and a Hex code
+				var stringBits = s.Split(' ');
+				// for part 2, we only care about the hex code
+
+				var rawHex = stringBits[2];
+				// trim parens
+				rawHex = rawHex.Trim('(');
+				rawHex = rawHex.Trim(')');
+
+				// parse the first 5 as a distance
+				int hexDistance = int.Parse(rawHex.Substring(1, 5), System.Globalization.NumberStyles.HexNumber);
+
+				// parse the last 1 as a direction
+				Direction edgeDir;
+				switch (rawHex[^1])
+				{
+					case '0':
+						edgeDir = Direction.Right;
+						break;
+					case '1':
+						edgeDir = Direction.Down;
+						break;
+					case '2':
+						edgeDir = Direction.Left;
+						break;
+					case '3':
+						edgeDir = Direction.Up;
+						break;
+					default:
+						throw new Exception("invalid input");
+				}
+
+				switch (edgeDir)
+				{
+					case Direction.Left:
+						rollingX += -hexDistance;
+						break;
+					case Direction.Right:
+						rollingX += hexDistance;
+						break;
+					case Direction.Up:
+						rollingY += hexDistance;
+						break;
+					case Direction.Down:
+						rollingY += -hexDistance;
+						break;
+				}
+
+				var newEdge = new Edge()
+				{
+					Direction = edgeDir,
+					EdgeColor = stringBits[2],
+					StartX = initialX,
+					StartY = initialY,
+					EndX = rollingX,
+					EndY = rollingY,
+					PriorEdge = priorEdge,
+				};
+				edgeList.Add(newEdge);
+				priorEdge = newEdge;
+			}
+
+			// assign last Edge as the priorEdge to the first Edge
+			edgeList[0].PriorEdge = priorEdge;
+
+			int xOffset = 0;
+			int yOffset = 0;
+
+			List<Pair> verts = new();
+			// set the forward looking edges too
+			foreach (Edge edge in edgeList)
+			{
+				edge.PriorEdge.NextEdge = edge;
+
+				var isConvex = IsConvexAngle(edge.Direction, edge.PriorEdge.Direction);
+
+				if (isConvex)
+				{
+					// top left
+					if (edge.Direction == Direction.Right)
+					{
+						xOffset = 0;
+						yOffset = 0;
+					}
+					//bottom right
+					if (edge.Direction == Direction.Left)
+					{
+						xOffset = 1;
+						yOffset = -1;
+					}
+					// top right
+					if (edge.Direction == Direction.Down)
+					{
+						xOffset = 1;
+						yOffset = 0;
+					}
+					// bottom right
+					if (edge.Direction == Direction.Up)
+					{
+						xOffset = 0;
+						yOffset = -1;
+					}
+				}
+				else
+				{
+					// top right
+					if (edge.Direction == Direction.Right)
+					{
+						xOffset = 1;
+						yOffset = 0;
+					}
+					// bottom left
+					if (edge.Direction == Direction.Left)
+					{
+						xOffset = 0;
+						yOffset = -1;
+					}
+					// bottom right
+					if (edge.Direction == Direction.Down)
+					{
+						xOffset = 1;
+						yOffset = -1;
+					}
+					// top left
+					if (edge.Direction == Direction.Up)
+					{
+						xOffset = 0;
+						yOffset = 0;
+					}
+				}
+
+				var nextVert = new Pair(edge.StartX + xOffset, edge.StartY + yOffset);
+				verts.Add(nextVert);
+			}
+
+			// Greene's theorem
+			long cumulativeArea = 0;
+			for (int i = 0; i < verts.Count - 1; i++)
+			{
+				var j = (i + 1) % verts.Count;
+				cumulativeArea = cumulativeArea + (verts[i].X * verts[j].Y);
+				cumulativeArea = cumulativeArea - (verts[i].Y * verts[j].X);
+			}
+
+			return cumulativeArea / 2;
 		}
 	}
 }
