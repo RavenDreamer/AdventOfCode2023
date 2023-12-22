@@ -293,11 +293,6 @@ internal class Puzzle_20
 					{
 						highPulseCount++;
 					}
-
-					if (RX_REACHED)
-					{
-						return i;
-					}
 				}
 			}
 
