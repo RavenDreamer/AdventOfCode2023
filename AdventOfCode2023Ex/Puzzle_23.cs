@@ -75,6 +75,43 @@ internal class Puzzle_23
 		}
 	}
 
+	internal class GraphNode
+	{
+		internal Point2 Loc { get; set; }
+		internal string Name { get; set; }
+
+		internal List<Tuple<GraphNode, int>> Edges { get; set; } = new();
+
+		internal void AddEdge(Tuple<GraphNode, int> par)
+		{
+			Edges.Add(par);
+		}
+
+		public GraphNode(string name, Point2 loc)
+		{
+			Name = name;
+			Loc = loc;
+		}
+
+		public override string ToString()
+		{
+			return Name + ": " + Loc.X + ", " + Loc.Y;
+		}
+
+		internal int DistToNext(GraphNode next)
+		{
+			foreach (Tuple<GraphNode, int> par in Edges)
+			{
+				if (next == par.Item1)
+				{
+					return par.Item2;
+				}
+			}
+
+			throw new Exception("Invalid node thingy");
+		}
+	}
+
 	internal class Part_1
 	{
 		static int Width { get; set; }
@@ -111,7 +148,7 @@ internal class Puzzle_23
 						case '<':
 						case 'v':
 							// create a new DAG node that starts from here
-							allNodes.Add(new DAGNode(new Point2(x, realY), "Node " + allNodes.Count + 1));
+							allNodes.Add(new DAGNode(new Point2(x, realY), "Node " + (allNodes.Count + 1)));
 							break;
 					}
 				}
@@ -127,6 +164,8 @@ internal class Puzzle_23
 			// traverse the grid, finding edges for each DAG node
 			foreach (DAGNode node in allNodes)
 			{
+				if (node == endNode) continue;
+
 				HashSet<Point2> traversedPoints = new();
 				Point2 lastPos = node.StartPos;
 
@@ -170,36 +209,58 @@ internal class Puzzle_23
 			}
 
 			// PART 1 SOLUTION HERE
-			// int longestPath = GetLongestPathToTarget(startNode, endNode);
-			// return longestPath -1 // (since we moved the start up)
+			int longestPath = GetLongestPathToTarget(startNode, endNode);
+			return longestPath - 1; // (since we moved the start up)
 
 			// PART 2 BEGINS HERE
 			// J/K, we're no longer a DAG. So butcher the DAG class back into regular ol' graphnodes.
 
-			Dictionary<Point2, DAGNode> graphNodeDict = new();
-			foreach (DAGNode node in allNodes)
-			{
-				graphNodeDict[node.StartPos] = new DAGNode(node.StartPos, "Node " + graphNodeDict.Count);
-			}
+			////List<GraphNode> nodes = new List<GraphNode>();
+			////Dictionary<Point2, GraphNode> gnLookup = new();
 
-			// now that it's initialized, add in the bidirectionality
-			foreach (DAGNode node in allNodes)
-			{
-				// duplicate edges
-				foreach (var e in node.Edges)
-				{
-					graphNodeDict[node.StartPos].AddEdge(e.Key, e.Value);
-				}
+			////GraphNode startGraphNode = null;
+			////GraphNode endGraphNode = null;
+			////foreach (DAGNode node in allNodes)
+			////{
+			////	var tempNode = new GraphNode(node.Name);
 
-				// set up reverse edges
-				foreach (var e in node.Edges)
-				{
-					graphNodeDict[e.Key].AddEdge(node.StartPos, e.Value);
-				}
-			}
+			////	if (node.Name == "Start Node")
+			////	{
+			////		startGraphNode = tempNode;
+			////	}
+			////	if (node.Name == "Goal Node")
+			////	{
+			////		endGraphNode = tempNode;
+			////	}
+			////	gnLookup[node.StartPos] = tempNode;
+			////}
 
-			int longestPath = GetPart2LongestPath(graphNodeDict[new Point2(1, Height)], graphNodeDict[new Point2(0, Width - 2)], graphNodeDict, new HashSet<Point2>());
-			return longestPath;// - 1; // (since we moved the start up)
+			////// all nodes exist, now add in directionality
+			////foreach (DAGNode node in allNodes)
+			////{
+			////	var tempNode = gnLookup[node.StartPos];
+
+			////	// end node has no outgoing edges
+			////	if (node != endNode)
+			////	{
+			////		foreach (var e in node.Edges)
+			////		{
+			////			tempNode.AddEdge(new Tuple<GraphNode, int>(gnLookup[e.Key], e.Value));
+			////		}
+			////	}
+			////	// start node has no incoming edges
+			////	if (node != startNode)
+			////	{
+			////		foreach (var e in node.Edges)
+			////		{
+			////			gnLookup[e.Key].AddEdge(new Tuple<GraphNode, int>(tempNode, e.Value));
+			////		}
+			////	}
+			////}
+
+
+			////int longestPath = GetLongestPathToTarget(startGraphNode, endGraphNode, new HashSet<GraphNode>());
+			////return longestPath; //longestPath;// - 1; // (since we moved the start up)
 
 			//////List<Edge> allEdges = new();
 			//////Edge startEdge;
@@ -298,6 +359,30 @@ internal class Puzzle_23
 				var pathLength = pair.Value;
 
 				var prospectiveLength = pathLength + GetLongestPathToTarget(nodeLookup[pair.Key], endNode);
+
+				if (prospectiveLength > longestPath)
+				{
+					longestPath = prospectiveLength;
+				}
+			}
+
+			return longestPath;
+		}
+
+		private static int GetLongestPathToTarget(GraphNode startNode, GraphNode endNode, HashSet<GraphNode> visited)
+		{
+			if (startNode == endNode) return 0;
+
+			if (visited.Contains(startNode)) return 0;
+			visited.Add(startNode);
+
+
+			int longestPath = 0;
+			foreach (var pair in startNode.Edges)
+			{
+				var pathLength = pair.Item2;
+
+				var prospectiveLength = pathLength + GetLongestPathToTarget(pair.Item1, endNode, new HashSet<GraphNode>(visited));
 
 				if (prospectiveLength > longestPath)
 				{
@@ -411,15 +496,237 @@ internal class Puzzle_23
 
 	internal class Part_2
 	{
+		static int Width { get; set; }
+		static int Height { get; set; }
 
 		public static long Execute()
 		{
-			string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"Data\Puzzle_22.txt");
+			string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"Data\Puzzle_23.txt");
 			string[] input = File.ReadAllLines(path);
 
-			return 0;
+			Width = input[0].Length;
+			Height = input.Length;
+			var pathGrid = new char[Width, Height];
+
+			// map input to a list of GraphNodes
+			List<GraphNode> allNodes = new();
+			List<Point2> nodeLocs = new();
+
+			// map input to a grid
+			for (int x = 0; x < Width; x++)
+			{
+				for (int y = 0; y < Height; y++)
+				{
+					var realY = Height - y - 1;
+					pathGrid[x, realY] = input[y][x];
+				}
+			}
+
+			// replace 1st and last nodes with distinct chars
+			pathGrid[1, Height - 1] = 'S';
+			pathGrid[Width - 2, 0] = 'E';
+
+			Dictionary<Point2, GraphNode> nodeLookup = new();
+
+			GraphNode start = null;
+			GraphNode end = null;
+
+			for (int x = 0; x < Width; x++)
+			{
+				for (int y = 0; y < Height; y++)
+				{
+					var tempPoint = new Point2(x, y);
+					switch (pathGrid[x, y])
+					{
+						case 'S':
+							nodeLookup[tempPoint] = new GraphNode("Start Node", tempPoint);
+							start = nodeLookup[tempPoint];
+							break;
+						case 'E':
+							nodeLookup[tempPoint] = new GraphNode("Goal Node", tempPoint);
+							end = nodeLookup[tempPoint];
+							break;
+						case '>':
+						case 'v':
+							nodeLookup[tempPoint] = new GraphNode("Node", tempPoint);
+							break;
+					}
+				}
+			}
+
+			// calculate edges between our nodes
+			foreach (var node in nodeLookup.Values)
+			{
+
+				var initialAdjPoints = GetAdjacentPoints(node.Loc, Width, Height);
+
+				foreach (var adjPoint in initialAdjPoints)
+				{
+					HashSet<GraphNode> edgeCandidates = new();
+
+					var visited = new HashSet<Point2>();
+					visited.Add(node.Loc);
+
+					// look along adjacent points until we find a non '.' coord
+					int pathCost = 0;
+					var adjPoints = new List<Point2>() { adjPoint };
+					while (adjPoints.Count > 0)
+					{
+						var workAdj = adjPoints[0];
+						// if we've been there, remove and continue;
+						if (visited.Contains(adjPoints[0]))
+						{
+							adjPoints.RemoveAt(0);
+							continue;
+						}
+						visited.Add(workAdj);
+						// if we haven't been, check the character at that location
+						switch (pathGrid[workAdj.X, workAdj.Y])
+						{
+							case '.':
+								// valid square, add its adjacent points to adjPoints
+								adjPoints.AddRange(GetAdjacentPoints(workAdj, Width, Height));
+								adjPoints.RemoveAt(0);
+								pathCost++;
+								continue;
+							case '#':
+								// invalid square, remove and continue;
+								adjPoints.RemoveAt(0);
+								continue;
+							default:
+								// we found a >, v, S, or E
+								edgeCandidates.Add(nodeLookup[new Point2(workAdj.X, workAdj.Y)]);
+								adjPoints.RemoveAt(0);
+								continue;
+						}
+					}
+
+
+					// set edge length to visited.Length - 1 (because we added in the start node
+					foreach (var ec in edgeCandidates)
+					{
+						node.AddEdge(new Tuple<GraphNode, int>(ec, pathCost));
+					}
+				}
+			}
+
+			// start from 19,3
+			var allPaths = FindPathsToNode(start, end, new HashSet<GraphNode>());
+
+			int longestPath = CalculatePathLengths(allPaths);
+
+			return longestPath;
 		}
 
+		private static int CalculatePathLengths(List<List<GraphNode>> allPaths)
+		{
+			int longestPath = 0;
+			foreach (var path in allPaths)
+			{
+				int pathLength = 0;
+				for (int i = 0; i < path.Count - 1; i++)
+				{
+					var current = path[i];
+					var next = path[i + 1];
+					var distToNext = current.DistToNext(next);
+					pathLength = pathLength + 1 + distToNext;
+				}
 
+				if (pathLength > longestPath)
+				{
+					// Console.WriteLine("Found new longest path:")
+					longestPath = pathLength;
+				}
+			}
+
+			return longestPath;
+		}
+
+		private static int GetLongestPathToTarget(GraphNode startNode, GraphNode endNode, HashSet<GraphNode> visited)
+		{
+			if (startNode == endNode) return 1;
+
+			visited.Add(startNode);
+
+			int longestPath = 0;
+			foreach (var pair in startNode.Edges)
+			{
+				if (visited.Contains(pair.Item1)) continue;
+
+				var pathLength = pair.Item2;
+
+				var prospectiveLength = 1 + pathLength + GetLongestPathToTarget(pair.Item1, endNode, new HashSet<GraphNode>(visited));
+
+				if (prospectiveLength > longestPath)
+				{
+					longestPath = prospectiveLength;
+				}
+			}
+
+			return longestPath;
+		}
+
+		private static List<List<GraphNode>> FindPathsToNode(GraphNode startNode, GraphNode endNode, HashSet<GraphNode> visited)
+		{
+			List<List<GraphNode>> result = new List<List<GraphNode>>();
+
+			if (startNode == endNode)
+			{
+				var goalPath = new List<GraphNode>();
+				goalPath.Add(startNode);
+				result.Add(goalPath);
+				return result;
+			}
+
+			visited.Add(startNode);
+			// recurse
+			foreach (var pair in startNode.Edges)
+			{
+				if (visited.Contains(pair.Item1)) continue;
+
+				// because of the way the graph is constructed, these edges are exclusive with each other.
+				var cloneVisited = new HashSet<GraphNode>(visited);
+				// so add in the "other" edges"
+				foreach (var subPair in startNode.Edges)
+				{
+					if (subPair.Item1 == pair.Item1) continue;
+					cloneVisited.Add(subPair.Item1);
+				}
+
+				var resultPaths = FindPathsToNode(pair.Item1, endNode, cloneVisited);
+				foreach (var p in resultPaths)
+				{
+					p.Add(startNode);
+					result.Add(p);
+				}
+			}
+
+			return result;
+		}
+
+		private static List<Point2> GetAdjacentPoints(Point2 pos, int width, int height)
+		{
+			List<Point2> adjPoints = new List<Point2>()
+			{
+				 new Point2(pos.X+1, pos.Y),
+				 new Point2(pos.X-1, pos.Y),
+				 new Point2(pos.X, pos.Y+1),
+				 new Point2(pos.X, pos.Y-1),
+			};
+
+			List<Point2> results = new();
+			foreach (Point2 p in adjPoints)
+			{
+				// remove points that are out of bounds
+				if (p.X < 0 || p.X >= Width || p.Y < 0 || p.Y >= Height)
+				{
+					// do not add to output
+					continue;
+				}
+				results.Add(p);
+			}
+
+			return results;
+		}
 	}
 }
